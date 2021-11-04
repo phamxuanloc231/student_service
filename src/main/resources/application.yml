@@ -2,10 +2,14 @@ server:
   port: 9002
 
 resilience4j:
-  retry:
+  ratelimiter:
     instances:
-      basic:
-       maxRetryAttemps: 5
-       waitDuration: 3s
+      basicExample:
+        # request di qua
+        limitForPeriod: 2
+        # trong 10s
+        limitRefreshPeriod: 3s
+        # thời gian requet tiếp theo vào đợi là 5s
+        timeoutDuration: 1s
 
 

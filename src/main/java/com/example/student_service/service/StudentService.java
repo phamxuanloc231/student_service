@@ -5,6 +5,7 @@ import com.example.student_service.VO.Department;
 import com.example.student_service.VO.ResponseTemplateVO;
 import com.example.student_service.entity.Student;
 import com.example.student_service.repository.StudentRepository;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,7 @@ public class StudentService {
     }
     private int flag = 0;
 
-    @Retry(name = "basic",fallbackMethod = "fallBackRetry")
+    @RateLimiter(name = "basicExample",fallbackMethod = "fallBackRateLimiter")
     public ResponseEntity<ResponseTemplateVO> getUserWithOrder(Long userId) {
         flag = flag +1;
         System.out.println("System retry count: "+flag);
@@ -31,7 +32,7 @@ public class StudentService {
         Student user =studentRepository.findById(userId).get();
         vo.setStudent(user);
         Department order =
-                restTemplate.getForObject("http://localhost:9001/orders/"
+                restTemplate.getForObject("http://localhost:9001/department/"
                                 + user.getDepartmentId(),
                         Department.class);
 
@@ -39,12 +40,12 @@ public class StudentService {
         return new ResponseEntity<ResponseTemplateVO>(vo, HttpStatus.OK);
     }
 
-    public ResponseEntity<ExceptionCustom> fallBackRetry(RuntimeException e){
+    public ResponseEntity<ExceptionCustom> fallBackRateLimiter(RuntimeException e){
         flag = 0;
-        System.out.println("Fall Back Retry: "+e.getMessage());
+        System.out.println("Fall Back Ratelimiter: "+e.getMessage());
         ResponseTemplateVO vo = new ResponseTemplateVO();
         ExceptionCustom exceptionCustom = new ExceptionCustom(
-                "Fall Back Retry Items Service is Down",e.getMessage());
+                "Fall Back Ratelimiter Items Service is Down",e.getMessage());
         return new ResponseEntity<ExceptionCustom>(exceptionCustom, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
