@@ -1,12 +1,17 @@
 package com.example.student_service.service;
 
+import com.example.student_service.ExceptionEntity.ExceptionCustom;
 import com.example.student_service.VO.Department;
 import com.example.student_service.VO.ResponseTemplateVO;
 import com.example.student_service.entity.Student;
 import com.example.student_service.repository.StudentRepository;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
+@Service
 public class StudentService {
     @Autowired
     private StudentRepository studentRepository;
@@ -16,18 +21,30 @@ public class StudentService {
     public Student saveStudent(Student student) {
         return studentRepository.save(student);
     }
+    private int flag = 0;
 
-    public ResponseTemplateVO getUserWithDepartment(Long studentId) {
+    @Retry(name = "basic",fallbackMethod = "fallBackRetry")
+    public ResponseEntity<ResponseTemplateVO> getUserWithOrder(Long userId) {
+        flag = flag +1;
+        System.out.println("System retry count: "+flag);
         ResponseTemplateVO vo = new ResponseTemplateVO();
-        Student student = studentRepository.findById(studentId).get();
-        vo.setStudent(student);
-        Department department =
-                restTemplate.getForObject("http://localhost:9001/department/"
-                                + student.getDepartmentId(),
+        Student user =studentRepository.findById(userId).get();
+        vo.setStudent(user);
+        Department order =
+                restTemplate.getForObject("http://localhost:9001/orders/"
+                                + user.getDepartmentId(),
                         Department.class);
 
-        vo.setDepartment(department);
+        vo.setDepartment(order);
+        return new ResponseEntity<ResponseTemplateVO>(vo, HttpStatus.OK);
+    }
 
-        return vo;
+    public ResponseEntity<ExceptionCustom> fallBackRetry(RuntimeException e){
+        flag = 0;
+        System.out.println("Fall Back Retry: "+e.getMessage());
+        ResponseTemplateVO vo = new ResponseTemplateVO();
+        ExceptionCustom exceptionCustom = new ExceptionCustom(
+                "Fall Back Retry Items Service is Down",e.getMessage());
+        return new ResponseEntity<ExceptionCustom>(exceptionCustom, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
