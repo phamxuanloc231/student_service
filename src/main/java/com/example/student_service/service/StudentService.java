@@ -31,7 +31,7 @@ public class StudentService {
         Student user =studentRepository.findById(userId).get();
         vo.setStudent(user);
         Department order =
-                restTemplate.getForObject("http://localhost:9001/orders/"
+                restTemplate.getForObject("http://localhost:9001/department/"
                                 + user.getDepartmentId(),
                         Department.class);
 
